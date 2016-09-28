@@ -38,16 +38,28 @@ def parse(url):
 
     url = urlparse.urlparse(url)
 
-    # Remove query strings.
-    path = url.path[1:]
-    path = path.split('?', 2)[0]
+    netloc = url.netloc
+    if "@" in netloc:
+        netloc = netloc.rsplit("@", 1)[1]
+    if ":" in netloc:
+        netloc = netloc.split(":", 1)[0]
+    hostname = netloc or ''
+    if url.scheme == 'unix':
+        hostname = url.path
+        db = (urlparse.parse_qs(url.query).get('db', []) + [''])[0]
+        port = None
+    else:
+        # Remove query strings.
+        db = url.path[1:]
+        db = db.split('?', 2)[0]
+        port = int(url.port or 6379)
 
     # Update with environment configuration.
     config.update({
-        "DB": int(path or 0),
+        "DB": int(db or 0),
         "PASSWORD": url.password or None,
-        "HOST": url.hostname or "localhost",
-        "PORT": int(url.port or 6379),
+        "HOST": hostname or "localhost",
+        "PORT": port,
     })
 
     return config
